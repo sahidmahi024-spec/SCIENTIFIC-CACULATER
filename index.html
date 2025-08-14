@@ -10,16 +10,16 @@
         color: white;
         font-family: Arial, sans-serif;
         display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        padding: 20px;
-        gap: 20px;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 10px;
     }
     .calculator {
         background: #333;
         padding: 20px;
         border-radius: 10px;
-        width: 350px;
+        width: 360px;
     }
     .display {
         background: black;
@@ -29,16 +29,21 @@
         text-align: right;
         border-radius: 5px;
         margin-bottom: 15px;
-        min-height: 40px;
         overflow-x: auto;
     }
     .keys {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        grid-template-columns: repeat(6, 1fr);
         gap: 8px;
     }
+    .var-panel {
+        margin-top: 15px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 5px;
+    }
     button {
-        padding: 15px;
+        padding: 12px;
         font-size: 1em;
         border: none;
         border-radius: 5px;
@@ -49,172 +54,130 @@
     button:hover {
         background: #777;
     }
-    .var-panel {
-        background: #444;
-        padding: 10px;
-        border-radius: 8px;
-        width: 150px;
-    }
-    .var-panel h3 {
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .var-list {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 5px;
-    }
-    .var-btn {
-        background: #666;
-        padding: 8px;
-        border-radius: 5px;
-        cursor: pointer;
-        text-align: center;
-    }
-    .var-btn:hover {
-        background: #888;
-    }
 </style>
 </head>
 <body>
+
 <div class="calculator">
     <div id="display" class="display">0</div>
     <div class="keys">
-        <button>(</button> <button>)</button> <button>π</button> <button>e</button> <button>ANS</button> <button>C</button>
+        <button>(</button> <button>)</button> <button>π</button> <button>EE</button> <button>ANS</button> <button>C</button>
         <button>sin</button> <button>cos</button> <button>tan</button> <button>asin</button> <button>acos</button> <button>atan</button>
-        <button>log</button> <button>ln</button> <button>10^x</button> <button>e^x</button> <button>√</button> <button>∛</button>
-        <button>^</button> <button>!</button> <button>M+</button> <button>M-</button> <button>MR</button> <button>MODE</button>
+        <button>log</button> <button>ln</button> <button>10^</button> <button>e^</button> <button>√</button> <button>∛</button>
+        <button>^</button> <button>!</button> <button>M+</button> <button>M-</button> <button>MR</button> <button>STORE</button>
         <button>7</button> <button>8</button> <button>9</button> <button>/</button> <button>⌫</button> <button>Rnd</button>
-        <button>4</button> <button>5</button> <button>6</button> <button>*</button> <button>ENG</button>
+        <button>4</button> <button>5</button> <button>6</button> <button>*</button> <button colspan="2">ENG</button>
         <button>1</button> <button>2</button> <button>3</button> <button>-</button> <button>=</button>
         <button>0</button> <button>.</button> <button>+/-</button> <button>+</button>
-        <button>STORE</button>
-        <!-- Variable Buttons A-Z -->
-        <button>a</button><button>b</button><button>c</button><button>d</button><button>e</button>
-        <button>f</button><button>g</button><button>h</button><button>i</button><button>j</button>
-        <button>k</button><button>l</button><button>m</button><button>n</button><button>o</button>
-        <button>p</button><button>q</button><button>r</button><button>s</button><button>t</button>
-        <button>u</button><button>v</button><button>w</button><button>x</button><button>y</button><button>z</button>
     </div>
 </div>
 
-<!-- Variable Panel -->
-<div class="var-panel">
-    <h3>Variables</h3>
-    <div class="var-list" id="varList"></div>
-</div>
+<div class="var-panel" id="var-panel"></div>
 
 <script>
-let display = document.getElementById('display');
-let memory = 0;
-let ans = 0;
-let expression = "";
-let storeMode = false;
-let variables = {};
-for (let ch of "abcdefghijklmnopqrstuvwxyz") variables[ch] = 0;
+document.addEventListener("DOMContentLoaded", () => {
+    let display = document.getElementById('display');
+    let expression = "";
+    let memory = 0;
+    let ans = 0;
+    let variables = {};
 
-function updateVarPanel() {
-    let list = document.getElementById('varList');
-    list.innerHTML = "";
-    for (let ch in variables) {
-        let btn = document.createElement('div');
-        btn.className = "var-btn";
-        btn.textContent = ${ch}: ${variables[ch]};
-        btn.addEventListener('click', (event) => {
-            if (storeMode) {
-                variables[ch] = parseFloat(display.textContent);
-                storeMode = false;
-                display.textContent = Stored ${variables[ch]} in ${ch};
-                updateVarPanel();
-            } else {
-                if (event.shiftKey) {
-                    expression += variables[ch];
-                } else {
-                    expression = variables[ch].toString();
+    // Create variable buttons a-z
+    const varPanel = document.getElementById('var-panel');
+    for (let ch = 97; ch <= 122; ch++) { // ASCII a-z
+        let btn = document.createElement('button');
+        btn.textContent = String.fromCharCode(ch);
+        btn.addEventListener('click', () => {
+            expression += btn.textContent;
+            display.textContent = expression;
+        });
+        varPanel.appendChild(btn);
+        variables[String.fromCharCode(ch)] = 0;
+    }
+
+    function updateDisplay(val) {
+        display.textContent = val || "0";
+    }
+
+    function safeEval(expr) {
+        let replaced = expr
+            .replace(/π/g, Math.PI)
+            .replace(/EE/g, Math.E)
+            .replace(/sin\(/g, "Math.sin(")
+            .replace(/cos\(/g, "Math.cos(")
+            .replace(/tan\(/g, "Math.tan(")
+            .replace(/asin\(/g, "Math.asin(")
+            .replace(/acos\(/g, "Math.acos(")
+            .replace(/atan\(/g, "Math.atan(")
+            .replace(/log\(/g, "Math.log10(")
+            .replace(/ln\(/g, "Math.log(")
+            .replace(/√/g, "Math.sqrt")
+            .replace(/∛/g, "Math.cbrt")
+            .replace(/10\^/g, "(10**")
+            .replace(/e\^/g, (Math.E**)
+            .replace(/\^/g, "")
+            .replace(/Rnd/g, Math.random())
+            .replace(/([a-z])/g, match => variables[match] ?? match); // replace variables
+
+        return eval(replaced);
+    }
+
+    document.querySelectorAll('.keys button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            let val = btn.textContent;
+
+            try {
+                if (val === "C") {
+                    expression = "";
+                    updateDisplay(expression);
                 }
-                display.textContent = expression || "0";
+                else if (val === "⌫") {
+                    expression = expression.slice(0, -1);
+                    updateDisplay(expression);
+                }
+                else if (val === "=") {
+                    let result = safeEval(expression);
+                    ans = result;
+                    expression = result.toString();
+                    updateDisplay(result);
+                }
+                else if (val === "ANS") {
+                    expression += ans;
+                    updateDisplay(expression);
+                }
+                else if (val === "M+") {
+                    memory += parseFloat(display.textContent) || 0;
+                }
+                else if (val === "M-") {
+                    memory -= parseFloat(display.textContent) || 0;
+                }
+                else if (val === "MR") {
+                    expression += memory;
+                    updateDisplay(expression);
+                }
+                else if (val === "STORE") {
+                    let varName = prompt("Enter variable name (a-z):");
+                    if (varName && /^[a-z]$/.test(varName)) {
+                        variables[varName] = parseFloat(display.textContent) || 0;
+                    }
+                }
+                else if (val === "+/-") {
+                    if (expression.startsWith("-")) {
+                        expression = expression.slice(1);
+                    } else {
+                        expression = "-" + expression;
+                    }
+                    updateDisplay(expression);
+                }
+                else {
+                    expression += val;
+                    updateDisplay(expression);
+                }
+            } catch (err) {
+                updateDisplay("Error");
+                expression = "";
             }
         });
-        list.appendChild(btn);
-    }
-}
-updateVarPanel();
-
-document.querySelectorAll('.keys button').forEach(btn => {
-    btn.addEventListener('click', (event) => {
-        let val = btn.textContent;
-        if (val === "C") {
-            expression = "";
-            display.textContent = "0";
-        } 
-        else if (val === "⌫") {
-            expression = expression.slice(0, -1);
-            display.textContent = expression || "0";
-        }
-        else if (val === "=") {
-            try {
-                let result = eval(expression
-                    .replace(/π/g, Math.PI)
-                    .replace(/e/g, Math.E));
-                ans = result;
-                display.textContent = result;
-                expression = result.toString();
-            } catch {
-                display.textContent = "Error";
-            }
-        }
-        else if (val === "ANS") {
-            expression += ans;
-            display.textContent = expression;
-        }
-        else if (val === "M+") {
-            memory += parseFloat(display.textContent);
-        }
-        else if (val === "M-") {
-            memory -= parseFloat(display.textContent);
-        }
-        else if (val === "MR") {
-            expression += memory;
-            display.textContent = expression;
-        }
-        else if (val === "STORE") {
-            storeMode = true;
-            display.textContent = "Store mode: click a variable";
-        }
-        else if (/^[a-z]$/.test(val)) {
-            if (storeMode) {
-                variables[val] = parseFloat(display.textContent);
-                storeMode = false;
-                display.textContent = Stored ${variables[val]} in ${val};
-                updateVarPanel();
-            } else {
-                if (event.shiftKey) {
-                    expression += variables[val];
-                } else {
-                    expression = variables[val].toString();
-                }
-                display.textContent = expression || "0";
-            }
-        }
-        else if (val === "sin") {
-            let res = Math.sin(parseFloat(display.textContent) * Math.PI / 180);
-            display.textContent = res;
-            expression = res.toString();
-        }
-        else if (val === "cos") {
-            let res = Math.cos(parseFloat(display.textContent) * Math.PI / 180);
-            display.textContent = res;
-            expression = res.toString();
-        }
-        else if (val === "tan") {
-            let res = Math.tan(parseFloat(display.textContent) * Math.PI / 180);
-            display.textContent = res;
-            expression = res.toString();
-        }
-        else {
-            expression += val;
-            display.textContent = expression;
-        }
     });
 });
 </script>
