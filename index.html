@@ -11,8 +11,9 @@
         font-family: Arial, sans-serif;
         display: flex;
         justify-content: center;
-        align-items: center;
-        height: 100vh;
+        align-items: flex-start;
+        padding: 20px;
+        gap: 20px;
     }
     .calculator {
         background: #333;
@@ -28,7 +29,7 @@
         text-align: right;
         border-radius: 5px;
         margin-bottom: 15px;
-        overflow-x: auto;
+        min-height: 40px;
     }
     .keys {
         display: grid;
@@ -47,6 +48,31 @@
     button:hover {
         background: #777;
     }
+    .var-panel {
+        background: #444;
+        padding: 10px;
+        border-radius: 8px;
+        width: 150px;
+    }
+    .var-panel h3 {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .var-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5px;
+    }
+    .var-btn {
+        background: #666;
+        padding: 8px;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+    }
+    .var-btn:hover {
+        background: #888;
+    }
 </style>
 </head>
 <body>
@@ -61,7 +87,20 @@
         <button>4</button> <button>5</button> <button>6</button> <button>*</button> <button colspan="2">ENG</button>
         <button>1</button> <button>2</button> <button>3</button> <button>-</button> <button>=</button>
         <button>0</button> <button>.</button> <button>+/-</button> <button>+</button>
+        <!-- Variable Buttons A-Z -->
+        <button>STORE</button>
+        <button>a</button><button>b</button><button>c</button><button>d</button><button>e</button>
+        <button>f</button><button>g</button><button>h</button><button>i</button><button>j</button>
+        <button>k</button><button>l</button><button>m</button><button>n</button><button>o</button>
+        <button>p</button><button>q</button><button>r</button><button>s</button><button>t</button>
+        <button>u</button><button>v</button><button>w</button><button>x</button><button>y</button><button>z</button>
     </div>
+</div>
+
+<!-- Variable Panel -->
+<div class="var-panel">
+    <h3>Variables</h3>
+    <div class="var-list" id="varList"></div>
 </div>
 
 <script>
@@ -69,16 +108,40 @@ let display = document.getElementById('display');
 let memory = 0;
 let ans = 0;
 let expression = "";
+let storeMode = false;
+let variables = {};
+for (let ch of "abcdefghijklmnopqrstuvwxyz") variables[ch] = 0;
 
-// Convert degrees to radians
-function degToRad(deg) {
-    return deg * (Math.PI / 180);
+function updateVarPanel() {
+    let list = document.getElementById('varList');
+    list.innerHTML = "";
+    for (let ch in variables) {
+        let btn = document.createElement('div');
+        btn.className = "var-btn";
+        btn.textContent = ${ch}: ${variables[ch]};
+        btn.addEventListener('click', (event) => {
+            if (storeMode) {
+                variables[ch] = parseFloat(display.textContent);
+                storeMode = false;
+                display.textContent = Stored ${variables[ch]} in ${ch};
+                updateVarPanel();
+            } else {
+                if (event.shiftKey) {
+                    expression += variables[ch];
+                } else {
+                    expression = variables[ch].toString();
+                }
+                display.textContent = expression || "0";
+            }
+        });
+        list.appendChild(btn);
+    }
 }
+updateVarPanel();
 
 document.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (event) => {
         let val = btn.textContent;
-
         if (val === "C") {
             expression = "";
             display.textContent = "0";
@@ -89,54 +152,70 @@ document.querySelectorAll('button').forEach(btn => {
         }
         else if (val === "=") {
             try {
-                let exp = expression
-                    .replace(/π/g, (${Math.PI}))
-                    .replace(/\be\b/g, (${Math.E}))
-                    .replace(/sin\(([^)]+)\)/g, (_, angle) => Math.sin(degToRad(eval(angle))))
-                    .replace(/cos\(([^)]+)\)/g, (_, angle) => Math.cos(degToRad(eval(angle))))
-                    .replace(/tan\(([^)]+)\)/g, (_, angle) => Math.tan(degToRad(eval(angle))))
-                    .replace(/asin\(([^)]+)\)/g, (_, val) => (Math.asin(eval(val)) * 180 / Math.PI))
-                    .replace(/acos\(([^)]+)\)/g, (_, val) => (Math.acos(eval(val)) * 180 / Math.PI))
-                    .replace(/atan\(([^)]+)\)/g, (_, val) => (Math.atan(eval(val)) * 180 / Math.PI))
-                    .replace(/√\(([^)]+)\)/g, (_, num) => Math.sqrt(eval(num)))
-                    .replace(/∛\(([^)]+)\)/g, (_, num) => Math.cbrt(eval(num)))
-                    .replace(/(\d+)!/g, (_, num) => factorial(parseInt(num)));
-
-                let result = eval(exp);
+                let result = eval(expression
+                    .replace(/π/g, Math.PI)
+                    .replace(/e/g, Math.E));
                 ans = result;
                 display.textContent = result;
                 expression = result.toString();
             } catch {
                 display.textContent = "Error";
             }
-        } 
+        }
         else if (val === "ANS") {
             expression += ans;
             display.textContent = expression;
-        } 
+        }
         else if (val === "M+") {
             memory += parseFloat(display.textContent);
-        } 
+        }
         else if (val === "M-") {
             memory -= parseFloat(display.textContent);
-        } 
+        }
         else if (val === "MR") {
             expression += memory;
             display.textContent = expression;
-        } 
+        }
+        else if (val === "STORE") {
+            storeMode = true;
+            display.textContent = "Store mode: click a variable";
+        }
+        else if (/^[a-z]$/.test(val)) {
+            if (storeMode) {
+                variables[val] = parseFloat(display.textContent);
+                storeMode = false;
+                display.textContent = Stored ${variables[val]} in ${val};
+                updateVarPanel();
+            } else {
+                if (event.shiftKey) {
+                    expression += variables[val];
+                } else {
+                    expression = variables[val].toString();
+                }
+                display.textContent = expression || "0";
+            }
+        }
+        else if (val === "sin") {
+            let res = Math.sin(parseFloat(display.textContent) * Math.PI / 180);
+            display.textContent = res;
+            expression = res.toString();
+        }
+        else if (val === "cos") {
+            let res = Math.cos(parseFloat(display.textContent) * Math.PI / 180);
+            display.textContent = res;
+            expression = res.toString();
+        }
+        else if (val === "tan") {
+            let res = Math.tan(parseFloat(display.textContent) * Math.PI / 180);
+            display.textContent = res;
+            expression = res.toString();
+        }
         else {
             expression += val;
             display.textContent = expression;
         }
     });
 });
-
-// Factorial function
-function factorial(n) {
-    if (n < 0) return NaN;
-    if (n === 0) return 1;
-    return n * factorial(n - 1);
-}
 </script>
 </body>
 </html>
