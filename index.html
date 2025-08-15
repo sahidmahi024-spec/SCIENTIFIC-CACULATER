@@ -3,23 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scientific Calculator</title>
+<title>Scientific Calculator with Variables</title>
 <style>
     body {
         background: #222;
         color: white;
         font-family: Arial, sans-serif;
         display: flex;
-        flex-direction: column;
+        justify-content: center;
         align-items: center;
-        margin: 0;
-        padding: 10px;
+        height: 100vh;
     }
     .calculator {
         background: #333;
         padding: 20px;
         border-radius: 10px;
-        width: 360px;
+        width: 420px;
+        max-height: 95vh;
+        overflow-y: auto;
     }
     .display {
         background: black;
@@ -29,21 +30,15 @@
         text-align: right;
         border-radius: 5px;
         margin-bottom: 15px;
-        overflow-x: auto;
+        word-wrap: break-word;
     }
     .keys {
         display: grid;
         grid-template-columns: repeat(6, 1fr);
         gap: 8px;
     }
-    .var-panel {
-        margin-top: 15px;
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 5px;
-    }
     button {
-        padding: 12px;
+        padding: 15px;
         font-size: 1em;
         border: none;
         border-radius: 5px;
@@ -57,127 +52,76 @@
 </style>
 </head>
 <body>
-
 <div class="calculator">
     <div id="display" class="display">0</div>
     <div class="keys">
-        <button>(</button> <button>)</button> <button>π</button> <button>EE</button> <button>ANS</button> <button>C</button>
+        <button>(</button> <button>)</button> <button>π</button> <button>e</button> <button>ANS</button> <button>C</button>
         <button>sin</button> <button>cos</button> <button>tan</button> <button>asin</button> <button>acos</button> <button>atan</button>
-        <button>log</button> <button>ln</button> <button>10^</button> <button>e^</button> <button>√</button> <button>∛</button>
-        <button>^</button> <button>!</button> <button>M+</button> <button>M-</button> <button>MR</button> <button>STORE</button>
+        <button>log</button> <button>ln</button> <button>10^x</button> <button>e^x</button> <button>√</button> <button>∛</button>
+        <button>^</button> <button>!</button> <button>M+</button> <button>M-</button> <button>MR</button> <button>MODE</button>
         <button>7</button> <button>8</button> <button>9</button> <button>/</button> <button>⌫</button> <button>Rnd</button>
         <button>4</button> <button>5</button> <button>6</button> <button>*</button> <button colspan="2">ENG</button>
         <button>1</button> <button>2</button> <button>3</button> <button>-</button> <button>=</button>
         <button>0</button> <button>.</button> <button>+/-</button> <button>+</button>
     </div>
+    <br>
+    <div class="keys">
+        <!-- A–Z variable buttons -->
+        <button>A</button> <button>B</button> <button>C</button> <button>D</button> <button>E</button> <button>F</button>
+        <button>G</button> <button>H</button> <button>I</button> <button>J</button> <button>K</button> <button>L</button>
+        <button>M</button> <button>N</button> <button>O</button> <button>P</button> <button>Q</button> <button>R</button>
+        <button>S</button> <button>T</button> <button>U</button> <button>V</button> <button>W</button> <button>X</button>
+        <button>Y</button> <button>Z</button>
+    </div>
 </div>
 
-<div class="var-panel" id="var-panel"></div>
-
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-    let display = document.getElementById('display');
-    let expression = "";
-    let memory = 0;
-    let ans = 0;
-    let variables = {};
+let display = document.getElementById('display');
+let memory = 0;
+let ans = 0;
+let expression = "";
 
-    // Create variable buttons a-z
-    const varPanel = document.getElementById('var-panel');
-    for (let ch = 97; ch <= 122; ch++) { // ASCII a-z
-        let btn = document.createElement('button');
-        btn.textContent = String.fromCharCode(ch);
-        btn.addEventListener('click', () => {
-            expression += btn.textContent;
-            display.textContent = expression;
-        });
-        varPanel.appendChild(btn);
-        variables[String.fromCharCode(ch)] = 0;
-    }
-
-    function updateDisplay(val) {
-        display.textContent = val || "0";
-    }
-
-    function safeEval(expr) {
-        let replaced = expr
-            .replace(/π/g, Math.PI)
-            .replace(/EE/g, Math.E)
-            .replace(/sin\(/g, "Math.sin(")
-            .replace(/cos\(/g, "Math.cos(")
-            .replace(/tan\(/g, "Math.tan(")
-            .replace(/asin\(/g, "Math.asin(")
-            .replace(/acos\(/g, "Math.acos(")
-            .replace(/atan\(/g, "Math.atan(")
-            .replace(/log\(/g, "Math.log10(")
-            .replace(/ln\(/g, "Math.log(")
-            .replace(/√/g, "Math.sqrt")
-            .replace(/∛/g, "Math.cbrt")
-            .replace(/10\^/g, "(10**")
-            .replace(/e\^/g, (Math.E**)
-            .replace(/\^/g, "")
-            .replace(/Rnd/g, Math.random())
-            .replace(/([a-z])/g, match => variables[match] ?? match); // replace variables
-
-        return eval(replaced);
-    }
-
-    document.querySelectorAll('.keys button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            let val = btn.textContent;
-
+document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        let val = btn.textContent;
+        if (val === "C") {
+            expression = "";
+            display.textContent = "0";
+        } 
+        else if (val === "⌫") {
+            expression = expression.slice(0, -1);
+            display.textContent = expression || "0";
+        }
+        else if (val === "=") {
             try {
-                if (val === "C") {
-                    expression = "";
-                    updateDisplay(expression);
-                }
-                else if (val === "⌫") {
-                    expression = expression.slice(0, -1);
-                    updateDisplay(expression);
-                }
-                else if (val === "=") {
-                    let result = safeEval(expression);
-                    ans = result;
-                    expression = result.toString();
-                    updateDisplay(result);
-                }
-                else if (val === "ANS") {
-                    expression += ans;
-                    updateDisplay(expression);
-                }
-                else if (val === "M+") {
-                    memory += parseFloat(display.textContent) || 0;
-                }
-                else if (val === "M-") {
-                    memory -= parseFloat(display.textContent) || 0;
-                }
-                else if (val === "MR") {
-                    expression += memory;
-                    updateDisplay(expression);
-                }
-                else if (val === "STORE") {
-                    let varName = prompt("Enter variable name (a-z):");
-                    if (varName && /^[a-z]$/.test(varName)) {
-                        variables[varName] = parseFloat(display.textContent) || 0;
-                    }
-                }
-                else if (val === "+/-") {
-                    if (expression.startsWith("-")) {
-                        expression = expression.slice(1);
-                    } else {
-                        expression = "-" + expression;
-                    }
-                    updateDisplay(expression);
-                }
-                else {
-                    expression += val;
-                    updateDisplay(expression);
-                }
-            } catch (err) {
-                updateDisplay("Error");
-                expression = "";
+                // Replace constants
+                let exprEval = expression.replace(/π/g, Math.PI).replace(/\be\b/g, Math.E);
+                let result = eval(exprEval);
+                ans = result;
+                display.textContent = result;
+                expression = result.toString();
+            } catch {
+                display.textContent = "00";
             }
-        });
+        } 
+        else if (val === "ANS") {
+            expression += ans;
+            display.textContent = expression;
+        } 
+        else if (val === "M+") {
+            memory += parseFloat(display.textContent);
+        } 
+        else if (val === "M-") {
+            memory -= parseFloat(display.textContent);
+        } 
+        else if (val === "MR") {
+            expression += memory;
+            display.textContent = expression;
+        } 
+        else {
+            expression += val;
+            display.textContent = expression;
+        }
     });
 });
 </script>
